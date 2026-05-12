@@ -4,7 +4,7 @@ import requests
 import streamlit as st
 from backend.rag import rag_query
 from backend.storage import get_pdf_url
-
+from streamlit_pdf_viewer import pdf_viewer
 
 # ── TAB 2: Paper Analysis ──────────────────────────────────────────────────────
 def render_analysis_tab():
@@ -90,64 +90,58 @@ def _get_pdf_b64(paper_name: str, url: str) -> str | None:
         st.error(f"❌ Could not load PDF: {e}")
         return None
 
-
 def render_pdf_tab():
     st.subheader("📄 PDF Viewer")
-    active_sess    = st.session_state.chat_sessions[st.session_state.active_session]
+    active_sess = st.session_state.chat_sessions[st.session_state.active_session]
     pdf_paths_dict = active_sess.get("pdf_paths", {})
-    pdf_papers     = active_sess.get("papers", [])
-    viewable       = [p for p in pdf_papers if p in pdf_paths_dict]
+    pdf_papers = active_sess.get("papers", [])
+    viewable = [p for p in pdf_papers if p in pdf_paths_dict]
 
     if not viewable:
         st.info("Upload and process papers to view them here.")
         return
 
     chosen_pdf = st.selectbox("Select a paper to view", viewable, key="pdf_viewer_select")
-    if not chosen_pdf:
-        return
+    
 
-    storage_path = pdf_paths_dict[chosen_pdf]
+    if chosen_pdf:
+        # 1. Get the signed URL from Supabase
+        storage_path = pdf_paths_dict[chosen_pdf]
+        url = get_pdf_url(storage_path, expires_in=3600) # 1 hour expiry
+        
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            pdf_bytes = response.content
+            
+            # --- ACTION BAR ---
+            col1, col2, _ = st.columns([1, 1, 2])
+            
+            with col1:
+                # Standard Download Button
+                st.download_button(
+                    label="⬇️ Download",
+                    data=pdf_bytes,
+                    file_name=chosen_pdf,
+                    mime="application/pdf"
+                )
+            
+            with col2:
+                # Direct link to open in a new browser tab
+                st.markdown(
+                    f'<a href="{url}" target="_blank" rel="noopener noreferrer">'
+                    f'<button style="height:38px; width:100%; cursor:pointer; border-radius:4px; border:1px solid #ccc;">📂 Open in New Tab</button>'
+                    f'</a>',
+                    unsafe_allow_html=True
+                )
+            
+            st.divider()
 
-    # Step 1: get (or refresh) the short-lived signed URL — one Supabase call
-    # at most every 6 hours per paper.
-    url = _get_cached_pdf_url(chosen_pdf, storage_path)
-
-    # Step 2: fetch bytes and encode — cached in session_state after the first
-    # load so subsequent reruns are instant.
-    with st.spinner("Loading PDF…"):
-        b64 = _get_pdf_b64(chosen_pdf, url)
-
-    if b64 == "__too_large__":
-        st.warning(
-            f"⚠️ **{chosen_pdf}** is larger than 20 MB and cannot be embedded directly. "
-            "Use the download button below to open it in your PDF reader."
-        )
-        # Still offer a direct-download link via the signed URL
-        st.markdown(
-            f'<a href="{url}" target="_blank" rel="noopener noreferrer">'
-            f'<button style="padding:0.5rem 1rem;cursor:pointer;">⬇️ Open / Download PDF</button>'
-            f'</a>',
-            unsafe_allow_html=True,
-        )
-        return
-
-    if not b64:
-        # Error already shown inside _get_pdf_b64
-        return
-
-    # Step 3: render via data URL — works in Chrome, Edge, Firefox, Safari.
-    # <embed> with a data: URL is never subject to X-Frame-Options or CSP
-    # frame-ancestor restrictions because there is no network request.
-    st.markdown(
-        f'<embed '
-        f'src="data:application/pdf;base64,{b64}" '
-        f'width="100%" height="800px" '
-        f'type="application/pdf" '
-        f'style="border:none; border-radius:4px;"'
-        f'>',
-        unsafe_allow_html=True,
-    )
-
+            # Display the visual viewer below the buttons
+            pdf_viewer(pdf_bytes, width=700)
+            
+        except Exception as e:
+            st.error(f"Could not load PDF: {e}")
 
 # ── TAB 4: Tools ──────────────────────────────────────────────────────────────
 def render_tools_tab():
