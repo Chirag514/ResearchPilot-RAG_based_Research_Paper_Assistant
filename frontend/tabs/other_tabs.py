@@ -1,4 +1,6 @@
 import time
+import base64
+import requests
 import streamlit as st
 from backend.rag import rag_query
 from backend.storage import get_pdf_url
@@ -24,28 +26,21 @@ def render_analysis_tab():
 _URL_TTL        = 21_600   # seconds — must match expires_in in storage.get_pdf_url()
 _URL_REFRESH_AT = 300      # refresh when < 5 min remain
 
+# Max PDF size to embed as base64 (20 MB). Above this we fall back to a
+# download button + warning, since a 20 MB base64 string is ~27 MB of HTML
+# which can make the page sluggish.
+_MAX_EMBED_BYTES = 20 * 1024 * 1024
+
 
 def _get_cached_pdf_url(paper_name: str, storage_path: str) -> str:
-    """Return a signed URL for *paper_name*, generating one only when needed.
-
-    Three cases that trigger a new Supabase API call:
-      1. No cached URL exists yet (first view of this paper).
-      2. The user switched to a different paper (cache key changed).
-      3. The cached URL is within _URL_REFRESH_AT seconds of expiry.
-
-    All other reruns (chat messages, button clicks, tab switches) reuse the
-    cached string — the iframe src stays identical so the browser never reloads
-    the PDF and the user keeps their scroll position.
-    """
+    """Return a signed URL for *paper_name*, generating one only when needed."""
     cache_key = f"pdf_url_cache::{paper_name}"
     now       = time.time()
     cached    = st.session_state.get(cache_key)
 
-    # Reuse if still fresh
     if cached and now < cached["expires_at"] - _URL_REFRESH_AT:
         return cached["url"]
 
-    # Generate a fresh signed URL (one Supabase API call)
     url = get_pdf_url(storage_path, expires_in=_URL_TTL)
     st.session_state[cache_key] = {
         "url":        url,
@@ -53,6 +48,47 @@ def _get_cached_pdf_url(paper_name: str, storage_path: str) -> str:
         "path":       storage_path,
     }
     return url
+
+
+def _get_pdf_b64(paper_name: str, url: str) -> str | None:
+    """Fetch PDF bytes from *url* and return a base64-encoded string.
+
+    Result is cached in session_state keyed by paper name so repeated
+    reruns (chat messages, tab switches) don't re-download the file.
+
+    Why base64 / data URL instead of an iframe with the raw signed URL?
+    ──────────────────────────────────────────────────────────────────
+    Chrome and Edge block <iframe> / <embed> tags that load PDFs from
+    third-party origins when the server sends restrictive
+    X-Frame-Options or Content-Security-Policy headers — which Supabase
+    Storage does.  Firefox is more permissive, so it worked there while
+    Chrome showed "This page has been blocked by Chrome".
+
+    A data: URL is same-origin by definition, so Chrome's frame-blocking
+    rules never apply and the built-in PDF viewer renders normally.
+    """
+    cache_key = f"pdf_b64_cache::{paper_name}"
+    cached    = st.session_state.get(cache_key)
+    if cached is not None:
+        return cached  # "" means a previous fetch failed — don't retry
+
+    try:
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+
+        if len(resp.content) > _MAX_EMBED_BYTES:
+            # Store sentinel so we don't retry on every rerun
+            st.session_state[cache_key] = "__too_large__"
+            return "__too_large__"
+
+        b64 = base64.b64encode(resp.content).decode("utf-8")
+        st.session_state[cache_key] = b64
+        return b64
+
+    except Exception as e:
+        st.session_state[cache_key] = ""   # sentinel — failed
+        st.error(f"❌ Could not load PDF: {e}")
+        return None
 
 
 def render_pdf_tab():
@@ -72,16 +108,43 @@ def render_pdf_tab():
 
     storage_path = pdf_paths_dict[chosen_pdf]
 
-    # FIX — Problem 1 (Scroll Reset) + Problem 2 (Expiration) + Problem 3 (Rate Limiting):
-    # Generate the signed URL once and cache it in session_state.
-    # Every subsequent rerun reuses the exact same URL string so the iframe
-    # src attribute never changes → browser keeps the PDF at the current page.
-    # The cache is refreshed automatically 5 minutes before it would expire.
+    # Step 1: get (or refresh) the short-lived signed URL — one Supabase call
+    # at most every 6 hours per paper.
     url = _get_cached_pdf_url(chosen_pdf, storage_path)
 
+    # Step 2: fetch bytes and encode — cached in session_state after the first
+    # load so subsequent reruns are instant.
+    with st.spinner("Loading PDF…"):
+        b64 = _get_pdf_b64(chosen_pdf, url)
+
+    if b64 == "__too_large__":
+        st.warning(
+            f"⚠️ **{chosen_pdf}** is larger than 20 MB and cannot be embedded directly. "
+            "Use the download button below to open it in your PDF reader."
+        )
+        # Still offer a direct-download link via the signed URL
+        st.markdown(
+            f'<a href="{url}" target="_blank" rel="noopener noreferrer">'
+            f'<button style="padding:0.5rem 1rem;cursor:pointer;">⬇️ Open / Download PDF</button>'
+            f'</a>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    if not b64:
+        # Error already shown inside _get_pdf_b64
+        return
+
+    # Step 3: render via data URL — works in Chrome, Edge, Firefox, Safari.
+    # <embed> with a data: URL is never subject to X-Frame-Options or CSP
+    # frame-ancestor restrictions because there is no network request.
     st.markdown(
-        f'<iframe src="{url}" width="100%" height="800" '
-        f'type="application/pdf" style="border:none;"></iframe>',
+        f'<embed '
+        f'src="data:application/pdf;base64,{b64}" '
+        f'width="100%" height="800px" '
+        f'type="application/pdf" '
+        f'style="border:none; border-radius:4px;"'
+        f'>',
         unsafe_allow_html=True,
     )
 
