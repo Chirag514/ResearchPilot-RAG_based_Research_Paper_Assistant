@@ -43,12 +43,26 @@ def delete_pdf(path: str):
 
 
 def delete_session_pdfs(user_id: str, session_id: str):
-    """Delete all PDFs for an entire session folder."""
-    prefix = f"{str(user_id)[:8]}/{session_id}"
+    """Delete all PDFs for an entire session folder.
+
+    Supabase Storage .list() takes a folder path, not a prefix.
+    Path structure: {uid8}/{session_id}/{filename}
+    So we list the folder {uid8}/{session_id} directly.
+    """
+    uid8       = str(user_id)[:8]
+    folder     = f"{uid8}/{session_id}"
     try:
-        files = _storage().list(prefix)
-        if files:
-            paths = [f"{prefix}/{f['name']}" for f in files]
+        files = _storage().list(folder)
+        if not files:
+            return
+        # Filter out folder entries (they have no 'id') and build full paths
+        paths = [
+            f"{folder}/{f['name']}"
+            for f in files
+            if f.get("name") and f.get("id")  # id is None for subfolders
+        ]
+        if paths:
             _storage().remove(paths)
-    except Exception:
-        pass
+    except Exception as e:
+        import streamlit as st
+        st.warning(f"⚠️ Could not delete session PDFs: {e}")
