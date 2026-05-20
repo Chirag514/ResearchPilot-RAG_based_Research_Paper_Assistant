@@ -8,7 +8,6 @@ langchain-huggingface==0.0.3
 langchain-pinecone
 langchain-text-splitters==0.2.4
 langsmith==0.1.147
-pinecone==7.3.0
 pypdf==4.2.0
 python-dotenv==1.0.1
 sentence-transformers==3.0.1
