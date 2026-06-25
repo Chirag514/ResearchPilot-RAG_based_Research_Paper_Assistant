@@ -12,9 +12,9 @@ from config import MODELS, PINECONE_INDEX
 # All models from config ordered by preference for background analysis:
 # fastest / highest token-limit first, most powerful as final fallback.
 ANALYZE_MODEL_CHAIN = [
-    "llama-3.1-8b-instant",                     # primary  — 131K tok/min
-    "meta-llama/llama-4-scout-17b-16e-instruct", # fallback 1
-    "openai/gpt-oss-20b",                        # fallback 2
+    "llama-3.1-8b-instant",                      # primary  — 131K tok/min
+    "openai/gpt-oss-20b",                        # fallback 1               
+    "qwen/qwen3.6-27b",                          # fallback 2
     "qwen/qwen3-32b",                            # fallback 3
     "llama-3.3-70b-versatile",                   # fallback 4
     "openai/gpt-oss-120b",                       # fallback 5 — most powerful
