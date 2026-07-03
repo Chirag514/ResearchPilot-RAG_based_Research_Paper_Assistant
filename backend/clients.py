@@ -15,9 +15,9 @@ ANALYZE_MODEL_CHAIN = [
     "openai/gpt-oss-20b",                        # primary           
     "qwen/qwen3.6-27b",                          # fallback 1
     "qwen/qwen3-32b",                            # fallback 2
-    "llama-3.3-70b-versatile",                   # fallback 3
-    "openai/gpt-oss-120b",                       # fallback 4
-    "groq/compound"                              # fallback 5 
+    "openai/gpt-oss-120b",                       # fallback 3                           
+    "groq/compound"                              # fallback 4
+    "groq/compound-mini"                         # fallback 5 
 ]
 
 
