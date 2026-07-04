@@ -69,7 +69,7 @@ if "initialized" not in st.session_state:
     st.session_state.chat_sessions   = saved["sessions"]
     st.session_state.active_session  = saved["active"]
     st.session_state.session_counter = saved["counter"]
-    st.session_state.selected_model  = "🧠 LLaMA 3.3 70B (Best Quality)"
+    st.session_state.selected_model  = "💎 GPT-OSS 120B  (Most Powerful)"
     st.session_state.renaming        = None
     st.session_state.vector_stores   = {}
     st.session_state.initialized     = True
