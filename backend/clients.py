@@ -11,13 +11,13 @@ from config import MODELS, PINECONE_INDEX
 # ── Analyze model fallback chain ───────────────────────────────────────────────
 # All models from config ordered by preference for background analysis:
 # fastest / highest token-limit first, most powerful as final fallback.
-ANALYZE_MODEL_CHAIN = [                     
-    "openai/gpt-oss-20b",                        # primary           
-    "qwen/qwen3.6-27b",                          # fallback 1
-    "qwen/qwen3-32b",                            # fallback 2
-    "openai/gpt-oss-120b",                       # fallback 3                           
-    "groq/compound"                              # fallback 4
-    "groq/compound-mini"                         # fallback 5 
+ANALYZE_MODEL_CHAIN = [
+    "openai/gpt-oss-20b",      # primary
+    "qwen/qwen3.6-27b",        # fallback 1
+    "qwen/qwen3-32b",          # fallback 2
+    "groq/compound-mini",      # fallback 3 (fast)
+    "groq/compound",           # fallback 4 (stronger)
+    "openai/gpt-oss-120b",     # final fallback (best reasoning)
 ]
 
 
