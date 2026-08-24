@@ -22,12 +22,13 @@ _ANALYZE_SYSTEM = (
 def auto_analyze(text: str, paper_name: str) -> str:
     """Analyze paper text using fallback model chain.
 
-    No model_id param — call_with_retry_fallback tries all models in
-    ANALYZE_MODEL_CHAIN automatically, starting with the fastest (8B).
+    No model_id param — call_with_retry_fallback tries all (provider, model_id)
+    pairs in ANALYZE_MODEL_CHAIN automatically, Groq and Gemini interleaved by
+    quality, until one succeeds or all are rate-limit exhausted.
     Safe to call from the main thread only (sequential by design).
     """
-    def fn_factory(model_id: str, api_key: str):
-        _llm   = get_llm(model_id, api_key)
+    def fn_factory(provider: str, model_id: str):
+        _llm   = get_llm(provider, model_id)
         prompt = ChatPromptTemplate.from_messages(
             [("system", _ANALYZE_SYSTEM), ("human", "{input}")]
         )
@@ -38,7 +39,6 @@ def auto_analyze(text: str, paper_name: str) -> str:
         fn_factory,
         {"input": f"Paper: {paper_name}\n\nText:\n{text[:3000]}"}
     )
-
 
 def _load_chunk_upload(args) -> tuple:
     """Stage 1 — runs in parallel threads.

@@ -4,34 +4,36 @@ import random
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from pinecone import Pinecone, ServerlessSpec
 from supabase import create_client
-from config import MODELS, PINECONE_INDEX
+from config import MODELS, MODEL_CHAIN, PINECONE_INDEX
 
 # ── Analyze model fallback chain ───────────────────────────────────────────────
-# All models from config ordered by preference for background analysis:
-# fastest / highest token-limit first, most powerful as final fallback.
-ANALYZE_MODEL_CHAIN = [
-    "openai/gpt-oss-20b",      # primary
-    "qwen/qwen3.6-27b",        # fallback 1
-    "qwen/qwen3-32b",          # fallback 2
-    "groq/compound-mini",      # fallback 3 (fast)
-    "groq/compound",           # fallback 4 (stronger)
-    "openai/gpt-oss-120b",     # final fallback (best reasoning)
-]
+# Derived directly from config.MODEL_CHAIN — same models, same quality order,
+# as the manual dropdown. Single source of truth, no drift between the two.
+ANALYZE_MODEL_CHAIN = [(provider, model_id) for _, provider, model_id in MODEL_CHAIN]
+
+
+def _is_rate_limit_error(e: Exception) -> bool:
+    msg = str(e).lower()
+    return (
+        "429" in msg or "rate_limit" in msg or "rate limit" in msg
+        or "resource_exhausted" in msg or "resource exhausted" in msg
+        or "quota" in msg
+    )
+
 
 
 def call_with_retry(fn, *args, max_retries: int = 4, base_delay: float = 5.0, **kwargs):
-    """Retry fn with exponential backoff on Groq 429 rate-limit errors.
-    All other exceptions are re-raised immediately.
+    """Retry fn with exponential backoff on rate-limit errors (Groq 429 or
+    Gemini RESOURCE_EXHAUSTED). All other exceptions are re-raised immediately.
     """
     for attempt in range(max_retries + 1):
         try:
             return fn(*args, **kwargs)
         except Exception as e:
-            msg = str(e).lower()
-            is_rate_limit = "429" in msg or "rate_limit" in msg or "rate limit" in msg
-            if not is_rate_limit or attempt == max_retries:
+            if not _is_rate_limit_error(e) or attempt == max_retries:
                 raise
             delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
             time.sleep(delay)
@@ -40,24 +42,22 @@ def call_with_retry(fn, *args, max_retries: int = 4, base_delay: float = 5.0, **
 def call_with_retry_fallback(fn_factory, *args,
                               max_retries: int = 3, base_delay: float = 5.0,
                               **kwargs):
-    """Try each model in ANALYZE_MODEL_CHAIN, falling back on 429 exhaustion.
+    """Try each (provider, model_id) in ANALYZE_MODEL_CHAIN, falling back on
+    rate-limit exhaustion.
 
-    fn_factory(model_id, api_key) must return a callable that accepts *args.
+    fn_factory(provider, model_id) must return a callable that accepts *args.
     Falls back to the next model only after exhausting retries for the current one.
-    Raises the last error if ALL models in the chain are exhausted.
+    Raises the last error if every model in the chain is exhausted.
     """
     last_error = None
-    groq_key   = os.getenv("GROQ_API_KEY")
 
-    for model_id in ANALYZE_MODEL_CHAIN:
-        fn = fn_factory(model_id, groq_key)
+    for provider, model_id in ANALYZE_MODEL_CHAIN:
+        fn = fn_factory(provider, model_id)
         for attempt in range(max_retries + 1):
             try:
                 return fn(*args, **kwargs)
             except Exception as e:
-                msg = str(e).lower()
-                is_rate_limit = "429" in msg or "rate_limit" in msg or "rate limit" in msg
-                if not is_rate_limit:
+                if not _is_rate_limit_error(e):
                     raise          # non-rate-limit — don't retry or fallback
                 if attempt < max_retries:
                     delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
@@ -66,7 +66,7 @@ def call_with_retry_fallback(fn_factory, *args,
                     last_error = e
                     break          # exhausted retries → try next model
 
-    raise last_error               # all 6 models exhausted
+    raise last_error               # every model in the chain exhausted
 
 
 @st.cache_resource(show_spinner=False)
@@ -110,12 +110,23 @@ def get_supabase_admin():
 
 
 @st.cache_resource(show_spinner=False)
-def get_llm(model_id: str, api_key: str):
-    return ChatGroq(api_key=api_key, model=model_id, temperature=0)
+def get_llm(provider: str, model_id: str):
+    """Cached per (provider, model_id) — Streamlit hashes the args automatically."""
+    if provider == "groq":
+        return ChatGroq(
+            api_key=os.getenv("GROQ_API_KEY"),
+            model=model_id,
+            temperature=0
+        )
+    elif provider == "gemini":
+        return ChatGoogleGenerativeAI(
+            google_api_key=os.getenv("GEMINI_API_KEY"),
+            model=model_id,
+            temperature=0
+        )
+    raise ValueError(f"Unknown provider: {provider}")
 
 
 def llm():
-    return get_llm(
-        MODELS[st.session_state.selected_model],
-        os.getenv("GROQ_API_KEY")
-    )
+    provider, model_id = MODELS[st.session_state.selected_model]
+    return get_llm(provider, model_id)

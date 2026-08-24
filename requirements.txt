@@ -4,6 +4,7 @@ langchain==0.2.16
 langchain-community==0.2.16
 langchain-core==0.2.43
 langchain-groq==0.1.9
+langchain-google-genai
 langchain-huggingface==0.0.3
 langchain-pinecone
 langchain-text-splitters==0.2.4

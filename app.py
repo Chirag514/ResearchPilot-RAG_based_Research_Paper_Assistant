@@ -41,6 +41,9 @@ if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_KEY"):
 if not os.getenv("SUPABASE_SERVICE_KEY"):
     st.error("⚠️ Add SUPABASE_SERVICE_KEY to .env and restart.")
     st.stop()
+if not os.getenv("GEMINI_API_KEY"):
+    st.error("⚠️ Add GEMINI_API_KEY to .env and restart.")
+    st.stop()
 
 # ── Preload embedding model silently (cached — free on subsequent calls) ───────
 # Done BEFORE auth gate so it's ready when user logs in, no spinner on login page
@@ -69,14 +72,14 @@ if "initialized" not in st.session_state:
     st.session_state.chat_sessions   = saved["sessions"]
     st.session_state.active_session  = saved["active"]
     st.session_state.session_counter = saved["counter"]
-    st.session_state.selected_model  = "💎 GPT-OSS 120B  (Most Powerful)"
+    from config import MODEL_CHAIN
+    st.session_state.selected_model  = MODEL_CHAIN[0][0]   # top of the quality-ordered chain
     st.session_state.renaming        = None
     st.session_state.vector_stores   = {}
     st.session_state.initialized     = True
-    # Ensure pdf_paths exists in every session (handles old saved data)
     for sess in st.session_state.chat_sessions.values():
         sess.setdefault("pdf_paths", {})
-        sess.pop("pdf_bytes", None)   # remove legacy key
+        sess.pop("pdf_bytes", None)
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 selected_paper, quick_query = render_sidebar()

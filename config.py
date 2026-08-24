@@ -1,8 +1,13 @@
 PINECONE_INDEX = "ragbasedproject"
 
-MODELS = {
-    "💎 GPT-OSS 120B  (Most Powerful)":  "openai/gpt-oss-120b",
-    "🚀 GPT-OSS 20B   (Balanced)":       "openai/gpt-oss-20b",
-    "🌐 Qwen3 32B     (Multilingual)":   "qwen/qwen3-32b",
-    "🔮 Qwen3 27B     (Efficient)":      "qwen/qwen3.6-27b"
-}
+MODEL_CHAIN = [
+    ("🔮 Qwen3.6 27B (Top Quality)",          "groq",   "qwen/qwen3.6-27b"),
+    ("💎 GPT-OSS 120B (Most Powerful)",       "groq",   "openai/gpt-oss-120b"),
+    ("🚀 GPT-OSS 20B (Balanced)",             "groq",   "openai/gpt-oss-20b"),
+    ("✨ Gemini 3.7 Flash (High Quality)",     "gemini", "gemini-3.7-flash"),
+    ("⚡ Gemini 3.1 Flash-Lite (High Volume)", "gemini", "gemini-3.1-flash-lite"),
+    ("🌊 Gemini 3.5 Flash-Lite (High Volume)", "gemini", "gemini-3.5-flash-lite"),
+]
+# dropped: qwen/qwen3-32b, all llama models — deprecated, no longer served by Groq
+
+MODELS = {name: (provider, model_id) for name, provider, model_id in MODEL_CHAIN}
