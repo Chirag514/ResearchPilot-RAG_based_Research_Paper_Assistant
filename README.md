@@ -67,12 +67,12 @@ Backend
 
 | Model | Provider | Model ID | Best For |
 |-------|----------|----------|----------|
-| 🔮 **Qwen3.6 27B** | Groq | `qwen/qwen3.6-27b` | Top quality |
 | 💎 **GPT-OSS 120B** | Groq | `openai/gpt-oss-120b` | Complex reasoning |
 | 🚀 **GPT-OSS 20B** | Groq | `openai/gpt-oss-20b` | Quality/speed balance |
 | ✨ **Gemini 3.7 Flash** | Gemini | `gemini-3.7-flash` | High-quality general tasks |
 | ⚡ **Gemini 3.1 Flash-Lite** | Gemini | `gemini-3.1-flash-lite` | High-volume inference |
 | 🌊 **Gemini 3.5 Flash-Lite** | Gemini | `gemini-3.5-flash-lite` | Final fallback |
+| 🔮 **Qwen3.6 27B** | Groq | `qwen/qwen3.6-27b` | Good quality |
 
 ---
 
