@@ -6,7 +6,7 @@ A multi-user research assistant that lets you upload PDFs and have context-aware
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.36.0-red)](https://streamlit.io)
 [![LangChain](https://img.shields.io/badge/LangChain-0.2.16-green)](https://langchain.com)
 
-**[Live Demo](https://researchpilot-rag.streamlit.app/) | [GitHub](https://github.com/Chirag514/ResearchPilot-RAG_based_Research_Paper_Assistant)**
+**[Live Demo](https://researchpilot-rag.streamlit.app/)**
 ---
 
 ## ✨ Features
@@ -19,7 +19,7 @@ A multi-user research assistant that lets you upload PDFs and have context-aware
   - Statistics Extractor — extract all numbers, metrics, and percentages
   - Research Gap Finder — identify open problems from limitations sections
   - Paper Comparator — compare two papers on methodology, results, contributions, etc.
-- **🧠 6 Switchable LLMs** — Switch models mid-chat based on speed or quality needs
+  - **🧠 6-Model LLM Fallback Chain** — Automatically switches between Groq and Gemini models when a model is unavailable or rate-limited
 - **💬 Multi-session Chats** — Create, rename, and delete chat sessions with persistent history
 - **🔍 Query Scope** — Filter queries to a specific paper or search across all uploaded papers
 - **⚡ Quick Actions** — One-click summaries, methodology, findings, and limitations
@@ -47,7 +47,17 @@ Backend
  └── state.py          → Persistent chat state via Supabase DB
  │
  ├── Pinecone          → Vector storage (all-MiniLM-L6-v2 embeddings)
- ├── Groq API          → LLM inference (6 models with fallback chain)
+ ├── LLM Inference
+ │   ├── Groq
+ │   │   ├── Qwen3.6 27B
+ │   │   ├── GPT-OSS 120B
+ │   │   └── GPT-OSS 20B
+ │   │
+ │   └── Gemini
+ │       ├── Gemini 3.7 Flash
+ │       ├── Gemini 3.1 Flash-Lite
+ │       └── Gemini 3.5 Flash-Lite
+ │
  └── Supabase          → Auth + DB + Storage
 ```
 
@@ -55,14 +65,14 @@ Backend
 
 ## 🤖 Supported Models
 
-| Model | Speed | Best For |
-|-------|-------|----------|
-| ⚡ LLaMA 3.1 8B | Fastest | Quick questions |
-| 🧠 LLaMA 3.3 70B | Balanced | Default — best quality |
-| 🔭 LLaMA 4 Scout | Fast | Multimodal tasks |
-| 💎 GPT-OSS 120B | Slowest | Most complex queries |
-| 🚀 GPT-OSS 20B | Balanced | Good quality/speed tradeoff |
-| 🌐 Qwen3 32B | Balanced | Multilingual papers |
+| Model | Provider | Model ID | Best For |
+|-------|----------|----------|----------|
+| 🔮 **Qwen3.6 27B** | Groq | `qwen/qwen3.6-27b` | Top quality |
+| 💎 **GPT-OSS 120B** | Groq | `openai/gpt-oss-120b` | Complex reasoning |
+| 🚀 **GPT-OSS 20B** | Groq | `openai/gpt-oss-20b` | Quality/speed balance |
+| ✨ **Gemini 3.7 Flash** | Gemini | `gemini-3.7-flash` | High-quality general tasks |
+| ⚡ **Gemini 3.1 Flash-Lite** | Gemini | `gemini-3.1-flash-lite` | High-volume inference |
+| 🌊 **Gemini 3.5 Flash-Lite** | Gemini | `gemini-3.5-flash-lite` | Final fallback |
 
 ---
 
@@ -83,6 +93,7 @@ Backend
 
 - Python 3.10+
 - [Groq API Key](https://console.groq.com)
+- [Gemini API Key](https://aistudio.google.com/)
 - [Pinecone API Key](https://pinecone.io)
 - [Supabase Project](https://supabase.com) (URL + anon key + service role key)
 
@@ -107,6 +118,7 @@ Create a `.env` file in the root directory:
 
 ```env
 GROQ_API_KEY=your_groq_api_key
+GEMINI_API_KEY=your_gemini_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_KEY=your_supabase_anon_key
