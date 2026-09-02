@@ -101,7 +101,7 @@ def process_files_parallel(new_files: list, existing_papers: list,
                            No LLM calls → no rate limit risk.
     Stage 2 (sequential) — call auto_analyze one paper at a time with a
                            small gap between calls. Uses fallback model
-                           chain (8B → Scout → GPT-OSS 20B → Qwen3 →
+                           chain (8B → Scout → GPT-OSS 20B → Qwen3.8 →
                            70B → GPT-OSS 120B) so rate limits on one
                            model automatically roll over to the next.
 

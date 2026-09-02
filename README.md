@@ -49,9 +49,9 @@ Backend
  ├── Pinecone          → Vector storage (all-MiniLM-L6-v2 embeddings)
  ├── LLM Inference
  │   ├── Groq
- │   │   ├── Qwen3.6 27B
  │   │   ├── GPT-OSS 120B
- │   │   └── GPT-OSS 20B
+ │   │   ├── GPT-OSS 20B
+ │   │   └── Qwen3.8 27B
  │   │
  │   └── Gemini
  │       ├── Gemini 3.7 Flash
@@ -72,7 +72,7 @@ Backend
 | ✨ **Gemini 3.7 Flash** | Gemini | `gemini-3.7-flash` | High-quality general tasks |
 | ⚡ **Gemini 3.1 Flash-Lite** | Gemini | `gemini-3.1-flash-lite` | High-volume inference |
 | 🌊 **Gemini 3.5 Flash-Lite** | Gemini | `gemini-3.5-flash-lite` | Final fallback |
-| 🔮 **Qwen3.6 27B** | Groq | `qwen/qwen3.6-27b` | Good quality |
+| 🔮 **Qwen3.8 27B** | Groq | `qwen/qwen3.8-27b` | Good quality |
 
 ---
 

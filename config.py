@@ -6,7 +6,7 @@ MODEL_CHAIN = [
     ("🚀 GPT-OSS 20B (Balanced)",             "groq",   "openai/gpt-oss-20b"),
     ("⚡ Gemini 3.1 Flash-Lite (High Volume)", "gemini", "gemini-3.1-flash-lite"),
     ("🌊 Gemini 3.5 Flash-Lite (High Volume)", "gemini", "gemini-3.5-flash-lite"),
-    ("🔮 Qwen3.6 27B (Good Quality)",          "groq",   "qwen/qwen3.6-27b"),
+    ("🔮 Qwen3.8 27B (Good Quality)",          "groq",   "qwen/qwen3.8-27b"),
 ]
 # dropped: qwen/qwen3-32b, all llama models — deprecated, no longer served by Groq
 
